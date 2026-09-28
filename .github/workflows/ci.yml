@@ -72,7 +72,7 @@ jobs:
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }}
   deploy:
-    needs: push
+    needs: [build, push]
     runs-on: ubuntu-latest
 
     steps:
@@ -83,4 +83,12 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "Connected to EC2"
+            docker pull ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }}
+
+            docker stop my-websb || true
+            docker rm my-websb || true
+
+            docker run -d \
+              --name my-websb \
+              -p 8081:80 \
+              ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }}
