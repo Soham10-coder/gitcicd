@@ -44,7 +44,7 @@ jobs:
 
       - name: Set image tag
         id: tag
-        run: echo "image_tag=1" >> "$GITHUB_OUTPUT"
+        run: echo "image_tag=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       - name: Build Docker image
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ steps.tag.outputs.image_tag }} .
