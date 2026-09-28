@@ -70,4 +70,4 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
 
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }} .
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }}
