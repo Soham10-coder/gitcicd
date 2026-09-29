@@ -77,24 +77,59 @@ jobs:
 
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }}
+  # deploy:
+  #   needs: [build, push]
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Deploy to EC2
+  #       uses: appleboy/ssh-action@v1.2.2
+  #       with:
+  #         host: ${{ secrets.EC2_HOST }}
+  #         username: ${{ secrets.EC2_USERNAME }}
+  #         key: ${{ secrets.EC2_SSH_KEY }}
+  #         script: |
+  #           docker pull ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }}
+
+  #           docker stop my-websb || true
+  #           docker rm my-websb || true
+
+  #           docker run -d \
+  #             --name my-websb \
+  #             -p 8081:80 \
+  #             ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }}
   deploy:
     needs: [build, push]
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to EC2
+      - name: Deploy new version
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+
           script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }}
+            IMAGE="${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }}"
 
-            docker stop my-websb || true
-            docker rm my-websb || true
+            echo "Pulling new image..."
+            docker pull $IMAGE
 
+            echo "Removing previous temporary container if it exists..."
+            docker stop my-websb-new || true
+            docker rm my-websb-new || true
+
+            echo "Starting new version on port 8082..."
             docker run -d \
-              --name my-websb \
-              -p 8081:80 \
-              ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }}
+              --name my-websb-new \
+              -p 8082:80 \
+              $IMAGE
+
+            echo "Waiting for application..."
+            sleep 5
+
+            echo "Running health check..."
+            curl --fail http://localhost:8082
+
+            echo "Health check successful!"
