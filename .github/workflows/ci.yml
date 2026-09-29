@@ -34,13 +34,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Upload repository
-        uses: actions/upload-artifact@v4
-        with:
-          name: source-code
-          path: |
-            index.html
-            Dockerfile
 
       - name: Set image tag
         id: tag
@@ -49,19 +42,32 @@ jobs:
       - name: Build Docker image
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ steps.tag.outputs.image_tag }} .
 
+      - name: Save Docker image
+        run: |
+          docker save \
+            ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ steps.tag.outputs.image_tag }} \
+            -o ci-website.tar
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: ci-website.tar
+
   push:
     needs: build
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download repository
+      - name: Download Docker image
         uses: actions/download-artifact@v4
         with:
-          name: source-code
+          name: docker-image
 
-      - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ci-website:${{ needs.build.outputs.image_tag }} .
+      - name: load Docker image
+        run: docker load -i ci-website.tar
+#i means input file
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
