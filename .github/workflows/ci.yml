@@ -133,3 +133,13 @@ jobs:
             curl --fail http://localhost:8082
 
             echo "Health check successful!"
+            docker stop my-websb
+            docker rm my-websb
+
+            docker stop my-websb-new
+            docker rm my-websb-new
+
+            docker run -d \
+             --name my-websb \
+            -p 8081:80 \
+            $IMAGE
