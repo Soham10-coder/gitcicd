@@ -133,6 +133,10 @@ jobs:
             curl --fail http://localhost:8082
 
             echo "Health check successful!"
+
+            OLD_IMAGE=$(docker inspect --format='{{.Config.Image}}' my-websb)
+            echo "Old image: $OLD_IMAGE"
+
             docker stop my-websb
             docker rm my-websb
 
@@ -143,3 +147,22 @@ jobs:
              --name my-websb \
             -p 8081:80 \
             $IMAGE
+            sleep 5
+
+            if curl --fail http://localhost:8081; then
+                echo "New deployment is healthy!"
+            else
+                echo "New deployment failed! Rolling back..."
+
+                docker stop my-websb || true
+                docker rm my-websb || true
+
+                docker run -d \
+                  --name my-websb \
+                  -p 8081:80 \
+                  $OLD_IMAGE
+
+                sleep 5
+
+                curl --fail http://localhost:8081
+            fi
